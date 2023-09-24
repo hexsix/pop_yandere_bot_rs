@@ -9,6 +9,7 @@ expire = 7776000
 
 [telegram]
 token = "1234567890:abcdefghijklmnopqrstuvwxyz"
+channel_id = "-01234567890"
 
 [yandere]
 rss_url = "https://yande.re/post/popular_recent"

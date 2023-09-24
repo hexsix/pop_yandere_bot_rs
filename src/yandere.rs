@@ -7,6 +7,7 @@ use serde_json::Value;
 use std::path::Path;
 use url::Url;
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct Post {
     id: i32,
@@ -48,7 +49,8 @@ fn extract_post(html: &str) -> Vec<&str> {
 pub fn parse_pop_recent(html: &str) -> Vec<Post> {
     let mut posts = vec![];
     for post in extract_post(html) {
-        let post: Post = serde_json::from_str(post).expect("todo");
+        let post: Post = serde_json::from_str(post)
+            .expect(&format!("oh, the json parse error, json = {}", post));
         trace!("post = {:?}", post);
         posts.push(post);
     }
@@ -136,6 +138,10 @@ impl Post {
             self.score, score_threshold
         );
         self.score < score_threshold
+    }
+
+    pub fn get_updated_at(&self) -> i64 {
+        self.updated_at
     }
 
     pub fn get_sample_url(&self) -> &str {
