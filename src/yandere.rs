@@ -1,8 +1,6 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use reqwest;
 use serde::Deserialize;
-use serde_json;
 use serde_json::Value;
 use std::path::Path;
 use url::Url;
@@ -49,8 +47,9 @@ fn extract_post(html: &str) -> Vec<&str> {
 pub fn parse_pop_recent(html: &str) -> Vec<Post> {
     let mut posts = vec![];
     for post in extract_post(html) {
-        let post: Post = serde_json::from_str(post)
-            .expect(&format!("oh, the json parse error, json = {}", post));
+        let post: Post = serde_json::from_str(post).unwrap_or_else(|_| {
+            panic!("oh, the json parse error, json = {}", post)
+        });
         trace!("post = {:?}", post);
         posts.push(post);
     }
@@ -187,14 +186,12 @@ impl Post {
                             }
                         }
                     }
-                } else {
-                    if let Some(host) = source.host_str() {
-                        caption += &format!(
-                            "source: [{}]({})\n",
-                            escape(host),
-                            escape(&self.source)
-                        );
-                    }
+                } else if let Some(host) = source.host_str() {
+                    caption += &format!(
+                        "source: [{}]({})\n",
+                        escape(host),
+                        escape(&self.source)
+                    );
                 }
             }
             if caption.is_empty() {
@@ -202,8 +199,8 @@ impl Post {
             }
         }
         caption += &escape(&format!("https://yande.re/post/show/{}", self.id));
-        debug!("caption = {}", caption.replace("\n", "\\n"));
-        return caption;
+        debug!("caption = {}", caption.replace('\n', "\\n"));
+        caption
     }
 }
 

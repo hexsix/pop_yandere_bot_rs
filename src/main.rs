@@ -57,11 +57,10 @@ async fn run(bot: &Bot, post: &Post) {
                         "post({}) filtered because of already sent",
                         post.get_id()
                     );
-                    return;
                 }
                 Ok(false) => {
                     match send_media_group(
-                        &bot,
+                        bot,
                         CONFIG.telegram.channel_id.clone(),
                         &children,
                     )
@@ -97,26 +96,25 @@ async fn run(bot: &Bot, post: &Post) {
         }
     } else {
         // send single
-        match already_sent_post(&REDIS_CLIENT, &post) {
+        match already_sent_post(&REDIS_CLIENT, post) {
             Ok(true) => {
                 info!(
                     "post({}) filtered because of already sent",
                     post.get_id()
                 );
-                return;
             }
             Ok(false) => {
                 match send_message(
-                    &bot,
+                    bot,
                     CONFIG.telegram.channel_id.clone(),
-                    &post,
+                    post,
                 )
                 .await
                 {
                     Ok(_) => {
                         if set_redis_post(
                             &REDIS_CLIENT,
-                            &post,
+                            post,
                             CONFIG.db.expire,
                         )
                         .is_err()

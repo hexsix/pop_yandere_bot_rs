@@ -37,7 +37,7 @@ pub async fn send_message(
 pub async fn send_media_group(
     bot: &Bot,
     chat_id: String,
-    posts: &Vec<Post>,
+    posts: &[Post],
 ) -> Result<(), ()> {
     thread::sleep(Duration::from_secs(3));
     let post_ids: Vec<i32> = posts.iter().map(|m| m.get_id()).collect();

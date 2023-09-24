@@ -20,11 +20,11 @@ pub fn already_sent_post(client: &Client, post: &Post) -> RedisResult<bool> {
                 return Ok(false);
             }
             debug!("oh, this post {} has been sent already.", post.get_id());
-            return Ok(true);
+            Ok(true)
         }
         None => {
             debug!("ok, this post {} hasn't been sent yet.", post.get_id());
-            return Ok(false);
+            Ok(false)
         }
     }
 }
