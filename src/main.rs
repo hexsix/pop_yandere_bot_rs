@@ -1,57 +1,51 @@
+use std::env;
+
+use teloxide::prelude::*;
 extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
 
-use log::LevelFilter;
-
 #[macro_use]
-mod config;
 mod yandere;
+mod bot;
+mod config;
 
-fn init_configs() -> config::Config {
-    let configs = std::fs::read_to_string("configs.toml").unwrap();
-    let configs: config::Config = toml::from_str(&configs).unwrap();
-    configs
+use crate::bot::*;
+use crate::config::Config;
+use once_cell::sync::Lazy;
+
+static CONFIG: Lazy<Config> = Lazy::new(|| {
+    let config_file = std::env::var("EXLOLI_CONFIG");
+    let config_file = config_file.as_deref().unwrap_or("configs.toml");
+    Config::new(config_file).expect("配置文件解析失败")
+});
+
+fn init_env(log_level: &str, teloxide_token: &str) {
+    env::set_var("RUST_LOG", log_level);
+    env::set_var("TELOXIDE_TOKEN", teloxide_token);
 }
 
-fn init_logger(log_level: &str) {
-    let mut wrong_log_level = false;
-    pretty_env_logger::formatted_builder()
-        .filter_level(match log_level {
-            "trace" => LevelFilter::Trace,
-            "debug" => LevelFilter::Debug,
-            "info" => LevelFilter::Info,
-            "warn" => LevelFilter::Warn,
-            "error" => LevelFilter::Error,
-            _ => {
-                wrong_log_level = true;
-                LevelFilter::Info
-            }
-        })
-        .init();
-    if wrong_log_level {
-        warn!("Wrong log_level, please check your configs.toml.");
-        info!("Set log_level to info as default.");
-    }
-}
-
-fn init() -> config::Config {
-    let configs = init_configs();
-    init_logger(&configs.core.log_level);
-    info!("configs: {:?}", configs);
-
-    configs
+fn init() {
+    init_env(&CONFIG.core.log_level, &CONFIG.telegram.token);
+    pretty_env_logger::init();
+    info!("configs: {:?}", CONFIG);
 }
 
 #[tokio::main]
 async fn main() {
-    let configs = init();
-    if let Ok(body) = yandere::request(&configs.yandere.rss_url).await {
+    init();
+
+    let bot = Bot::from_env();
+
+    if let Ok(body) = yandere::request(&CONFIG.yandere.rss_url).await {
         let posts = yandere::parse_pop_recent(&body);
         info!("{} posts in total", posts.len());
         for (i, post) in posts.iter().enumerate() {
-            info!("{} of {} is now processing.", i, posts.len());
-            if post.score_filter(configs.yandere.score_threshold) {
+            if post.get_id() != 1121914 {
+                continue;
+            }
+            info!("{} of {} is now processing.", i + 1, posts.len());
+            if post.score_filter(CONFIG.yandere.score_threshold) {
                 info!("post({}) filtered because of low score", post.get_id());
                 continue;
             }
@@ -59,10 +53,16 @@ async fn main() {
             if let Ok(parent_id) = post.get_parent() {
                 if let Ok(parent) = yandere::Post::new(parent_id).await {
                     let children = parent.get_children().await;
-                    // todo: send children
+                    send_media_group(
+                        &bot,
+                        CONFIG.telegram.channel_id.clone(),
+                        children,
+                    )
+                    .await;
                 }
             } else {
-                // todo: send post
+                send_message(&bot, CONFIG.telegram.channel_id.clone(), post)
+                    .await;
             }
         }
     }

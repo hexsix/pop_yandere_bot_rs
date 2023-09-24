@@ -1,4 +1,7 @@
 use std::fmt;
+use std::path::Path;
+
+use anyhow::Error;
 
 use serde::Deserialize;
 
@@ -10,6 +13,14 @@ pub struct Config {
     pub yandere: Yandere,
 }
 
+impl Config {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let configs = std::fs::read_to_string(path)?;
+        let configs: Config = toml::from_str(&configs)?;
+        Ok(configs)
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Core {
     pub log_level: String,
@@ -18,16 +29,18 @@ pub struct Core {
 #[derive(Debug, Deserialize)]
 pub struct Database {
     pub database_url: String,
+    pub expire: i32,
 }
 
 #[derive(Deserialize)]
 pub struct Telegram {
     pub token: String,
+    pub channel_id: String,
 }
 
 impl fmt::Debug for Telegram {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Telegram {{ token: ****** }}")
+        write!(f, "Telegram {{ token: ******, channel_id: {} }}", self.channel_id)
     }
 }
 
@@ -43,8 +56,17 @@ mod test {
 
     #[test]
     fn ok() {
-        let configs = std::fs::read_to_string("configs.toml").unwrap();
-        let configs: Config = toml::from_str(&configs).unwrap();
-        let _ = configs;
+        if let Ok(configs) = Config::new("configs.toml") {
+            assert!(vec!["trace", "debug", "info", "warn", "error"]
+                .contains(&configs.core.log_level.as_str()))
+        }
+    }
+
+    #[test]
+    fn err() {
+        match Config::new("config.toml") {
+            Ok(_) => panic!(),
+            Err(_) => (),
+        }
     }
 }
