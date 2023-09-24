@@ -154,7 +154,10 @@ async fn main() {
             }
         }
         Err(e) => {
-            error!("oh, request {} error. error = {}", CONFIG.yandere.rss_url, e);
+            error!(
+                "oh, request {} error. error = {}",
+                CONFIG.yandere.rss_url, e
+            );
         }
     }
 }
