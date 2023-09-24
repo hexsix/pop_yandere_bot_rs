@@ -1,5 +1,5 @@
 # Stage 1: Build stage
-FROM rust:latest as build
+FROM rust:bullseye as build
 WORKDIR /app
 COPY . .
 RUN cargo build --release
