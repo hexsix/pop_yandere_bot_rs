@@ -1,9 +1,7 @@
+use anyhow::Error;
+use serde::Deserialize;
 use std::fmt;
 use std::path::Path;
-
-use anyhow::Error;
-
-use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -29,7 +27,7 @@ pub struct Core {
 #[derive(Debug, Deserialize)]
 pub struct Database {
     pub database_url: String,
-    pub expire: i32,
+    pub expire: usize,
 }
 
 #[derive(Deserialize)]
@@ -40,7 +38,11 @@ pub struct Telegram {
 
 impl fmt::Debug for Telegram {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Telegram {{ token: ******, channel_id: {} }}", self.channel_id)
+        write!(
+            f,
+            "Telegram {{ token: ******, channel_id: {} }}",
+            self.channel_id
+        )
     }
 }
 
