@@ -1,0 +1,5 @@
+FROM debian:bullseye-slim
+# RUN apt-get update && apt-get install -y openssl && apt clean && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY target/release/pop_yandere_bot .
+CMD ["./pop_yandere_bot"]
