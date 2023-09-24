@@ -4,6 +4,8 @@ use reqwest;
 use serde::Deserialize;
 use serde_json;
 use serde_json::Value;
+use std::path::Path;
+use url::Url;
 
 #[derive(Debug, Deserialize)]
 pub struct Post {
@@ -129,8 +131,73 @@ impl Post {
     }
 
     pub fn score_filter(&self, score_threshold: i32) -> bool {
-        debug!("post.score = {}, score_threshold = {}", self.score, score_threshold);
+        debug!(
+            "post.score = {}, score_threshold = {}",
+            self.score, score_threshold
+        );
         self.score < score_threshold
+    }
+
+    pub fn get_sample_url(&self) -> &str {
+        &self.sample_url
+    }
+
+    pub fn get_caption(&self) -> String {
+        fn escape(text: &str) -> String {
+            let escape_chars = [
+                "_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-",
+                "=", "|", "{", "}", ".", "!",
+            ];
+
+            let mut escaped_text = String::from(text);
+
+            for escape_char in &escape_chars {
+                let escaped_char = format!("\\{}", escape_char);
+                escaped_text =
+                    escaped_text.replace(escape_char, &escaped_char);
+            }
+
+            escaped_text
+        }
+        let mut caption = String::new();
+        if !self.source.is_empty() {
+            if let Ok(source) = Url::parse(&self.source) {
+                if self.source.contains("pximg") {
+                    // pixiv
+                    if let Some(file_name) =
+                        Path::new(&self.source).file_name()
+                    {
+                        if let Some(base_name) = file_name.to_str() {
+                            if let Some(pixiv_id) = base_name.split('_').next()
+                            {
+                                caption += &format!(
+                                    "source: [{}]({})\n",
+                                    escape("www.pixiv.net"),
+                                    escape(&format!(
+                                        "https://www.pixiv.net/artworks/{}",
+                                        pixiv_id
+                                    ))
+                                );
+                            }
+                        }
+                    }
+                } else {
+                    if let Some(host) = source.host_str() {
+                        caption += &format!(
+                            "source: [{}]({})\n",
+                            escape(host),
+                            escape(&self.source)
+                        );
+                    }
+                }
+            }
+            if caption.is_empty() {
+                caption += &format!("source: {}\n", &escape(&self.source));
+            }
+        }
+        caption += &escape(&format!("https://yande.re/post/show/{}", self.id));
+        debug!("caption = {}", caption.replace("\n", "\\n"));
+        return caption;
     }
 }
 
