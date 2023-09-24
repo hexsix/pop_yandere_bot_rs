@@ -1,17 +1,35 @@
-use std::fmt;
-
 use lazy_static::lazy_static;
-use quick_xml::events::Event;
-use quick_xml::reader::Reader;
 use regex::Regex;
 use reqwest;
-use serde_json;
 use serde::Deserialize;
+use serde_json;
+use serde_json::Value;
+
+#[derive(Debug, Deserialize)]
+pub struct Post {
+    id: i32,
+    tags: String,
+    created_at: i64,
+    updated_at: i64,
+    source: String,
+    score: i32,
+    md5: String,
+    file_size: i32,
+    file_ext: String,
+    file_url: String,
+    sample_url: String,
+    sample_file_size: i32,
+    rating: String,
+    has_children: bool,
+    parent_id: Option<i32>,
+    is_held: bool,
+}
 
 pub async fn request(url: &str) -> Result<String, reqwest::Error> {
     let body = reqwest::get(url).await?.text().await?;
 
-    debug!("body = {:?}", body);
+    debug!("ok, request {}", url);
+    trace!("body = {:?}", body);
 
     Ok(body)
 }
@@ -28,261 +46,112 @@ fn extract_post(html: &str) -> Vec<&str> {
 pub fn parse_pop_recent(html: &str) -> Vec<Post> {
     let mut posts = vec![];
     for post in extract_post(html) {
-        debug!("post = {}", post);
-        let post: Post = serde_json::from_str(post).expect("JSON was not well-formatted");
-        debug!("post = {:?}", post);
+        let post: Post = serde_json::from_str(post).expect("todo");
+        trace!("post = {:?}", post);
         posts.push(post);
     }
+    let post_ids: Vec<i32> = posts.iter().map(|m| m.id).collect();
+    debug!("post_ids = {:?}", post_ids);
     posts
 }
 
-#[derive(Debug, Deserialize)]
-pub struct Post {
-    id: i32,
-    tags: String,
-    created_at: i64,
-    updated_at: i64,
-    // author: String,
-    source: String,
-    score: i32,
-    md5: String,
-    file_size: i32,
-    file_ext: String,
-    file_url: String,
-    sample_url: String,
-    sample_file_size: i32,
-    rating: String,
-    has_children: bool,
-    children: Option<Vec<i32>>,
-    parent_id: Option<i32>,
-    is_held: bool,
-}
-
-#[derive(Debug, Clone)]
-struct PostConstructError;
-
-impl fmt::Display for PostConstructError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "cannot contruct Post")
-    }
-}
-
 impl Post {
-    async fn new(id: i32) -> Result<Self, PostConstructError> {
-        let target = format!("https://yande.re/post.xml?tags=id:{}", id);
-        if let Ok(xml) = request(&target).await {
-            let mut reader = Reader::from_str(&xml);
-            reader.trim_text(true);
-            let mut buf = Vec::new();
-
-            loop {
-                match reader.read_event_into(&mut buf) {
-                    Err(e) => warn!(
-                        "Error at position {}: {:?}",
-                        reader.buffer_position(),
-                        e
-                    ),
-                    Ok(Event::Eof) => break,
-
-                    Ok(Event::Start(ref e))
-                        if e.name().as_ref() == b"post" =>
-                    {
-                        let mut tags = String::new();
-                        let mut created_at = 0;
-                        let mut updated_at = 0;
-                        let mut source = String::new();
-                        let mut score = 0;
-                        let mut md5 = String::new();
-                        let mut file_size = 0;
-                        let mut file_ext = String::new();
-                        let mut file_url = String::new();
-                        let mut sample_url = String::new();
-                        let mut sample_file_size = 0;
-                        let mut rating = String::new();
-                        let mut has_children = false;
-                        let mut parent_id = None;
-                        let mut is_held = false;
-                        let children = vec![];
-                        for attribute in e.attributes() {
-                            if let Ok(attrib) = attribute {
-                                match attrib.key.as_ref() {
-                                    b"tags" => {
-                                        tags = String::from(
-                                            attrib
-                                                .decode_and_unescape_value(
-                                                    &reader,
-                                                )
-                                                .unwrap()
-                                                .as_ref(),
-                                        );
-                                    }
-                                    b"created_at" => {
-                                        created_at = attrib
-                                            .decode_and_unescape_value(&reader)
-                                            .unwrap()
-                                            .as_ref()
-                                            .parse()
-                                            .unwrap();
-                                    }
-                                    b"updated_at" => {
-                                        updated_at = attrib
-                                            .decode_and_unescape_value(&reader)
-                                            .unwrap()
-                                            .as_ref()
-                                            .parse()
-                                            .unwrap();
-                                    }
-                                    b"source" => {
-                                        source = String::from(
-                                            attrib
-                                                .decode_and_unescape_value(
-                                                    &reader,
-                                                )
-                                                .unwrap()
-                                                .as_ref(),
-                                        );
-                                    }
-                                    b"score" => {
-                                        score = attrib
-                                            .decode_and_unescape_value(&reader)
-                                            .unwrap()
-                                            .as_ref()
-                                            .parse()
-                                            .unwrap();
-                                    }
-                                    b"md5" => {
-                                        md5 = String::from(
-                                            attrib
-                                                .decode_and_unescape_value(
-                                                    &reader,
-                                                )
-                                                .unwrap()
-                                                .as_ref(),
-                                        );
-                                    }
-                                    b"file_size" => {
-                                        file_size = attrib
-                                            .decode_and_unescape_value(&reader)
-                                            .unwrap()
-                                            .as_ref()
-                                            .parse()
-                                            .unwrap();
-                                    }
-                                    b"file_ext" => {
-                                        file_ext = String::from(
-                                            attrib
-                                                .decode_and_unescape_value(
-                                                    &reader,
-                                                )
-                                                .unwrap()
-                                                .as_ref(),
-                                        );
-                                    }
-                                    b"file_url" => {
-                                        file_url = String::from(
-                                            attrib
-                                                .decode_and_unescape_value(
-                                                    &reader,
-                                                )
-                                                .unwrap()
-                                                .as_ref(),
-                                        );
-                                    }
-                                    b"sample_file_size" => {
-                                        sample_file_size = attrib
-                                            .decode_and_unescape_value(&reader)
-                                            .unwrap()
-                                            .as_ref()
-                                            .parse()
-                                            .unwrap();
-                                    }
-                                    b"sample_url" => {
-                                        sample_url = String::from(
-                                            attrib
-                                                .decode_and_unescape_value(
-                                                    &reader,
-                                                )
-                                                .unwrap()
-                                                .as_ref(),
-                                        );
-                                    }
-                                    b"rating" => {
-                                        rating = String::from(
-                                            attrib
-                                                .decode_and_unescape_value(
-                                                    &reader,
-                                                )
-                                                .unwrap()
-                                                .as_ref(),
-                                        );
-                                    }
-                                    b"has_children" => {
-                                        has_children = attrib
-                                            .decode_and_unescape_value(&reader)
-                                            .unwrap()
-                                            .as_ref()
-                                            .parse()
-                                            .unwrap();
-                                    }
-                                    b"parent_id" => {
-                                        parent_id = match attrib
-                                            .decode_and_unescape_value(&reader)
-                                            .unwrap()
-                                            .as_ref()
-                                        {
-                                            "" => None,
-                                            s => Some(s.parse().unwrap()),
-                                        };
-                                    }
-                                    b"is_held" => {
-                                        is_held = attrib
-                                            .decode_and_unescape_value(&reader)
-                                            .unwrap()
-                                            .as_ref()
-                                            .parse()
-                                            .unwrap();
-                                    }
-                                    _ => {}
-                                }
-                            }
-                        }
-                        return Ok(Self {
-                            id,
-                            tags,
-                            created_at,
-                            updated_at,
-                            source,
-                            score,
-                            md5,
-                            file_size,
-                            file_ext,
-                            file_url,
-                            sample_url,
-                            sample_file_size,
-                            rating,
-                            has_children,
-                            children: Some(children),
-                            parent_id,
-                            is_held,
-                        });
-                    }
-
-                    _ => (),
+    pub async fn new(id: i32) -> Result<Post, ()> {
+        let target =
+            format!("https://yande.re/post.json?api_version=2&tags=id:{}", id);
+        if let Ok(response) = request(&target).await {
+            let post: Result<Value, _> = serde_json::from_str(&response);
+            if let Ok(post) = post {
+                let post = post.get("posts").unwrap().get(0).unwrap().clone();
+                if let Ok(post) = serde_json::from_value(post) {
+                    debug!("ok, new post {}", id);
+                    trace!("post = {:?}", post);
+                    return Ok(post);
                 }
-                buf.clear();
             }
         }
-        Err(PostConstructError)
+        Err(())
     }
 
-    pub fn parent(&self) {
-        format!(
-            "https://yande.re/post.xml?tags=parent:{}%20holds:true",
+    pub async fn get_children(&self) -> Vec<Post> {
+        let mut children: Vec<Post> = vec![];
+        let target = format!(
+            "https://yande.re/post.json?api_version=2&tags=parent:{}%20holds:true",
             self.id
         );
+        if let Ok(response) = request(&target).await {
+            let posts: Result<Value, _> = serde_json::from_str(&response);
+            if let Ok(posts) = posts {
+                if let Some(posts) = posts.get("posts").unwrap().as_array() {
+                    for post in posts {
+                        if let Ok(post) = serde_json::from_value(post.clone())
+                        {
+                            children.push(post);
+                        }
+                    }
+                }
+            }
+        }
+        let target = format!(
+            "https://yande.re/post.json?api_version=2&tags=parent:{}",
+            self.id
+        );
+        if let Ok(response) = request(&target).await {
+            let posts: Result<Value, _> = serde_json::from_str(&response);
+            if let Ok(posts) = posts {
+                if let Some(posts) = posts.get("posts").unwrap().as_array() {
+                    for post in posts {
+                        if let Ok(post) = serde_json::from_value(post.clone())
+                        {
+                            children.push(post);
+                        }
+                    }
+                }
+            }
+        }
+        let children_ids: Vec<i32> = children.iter().map(|m| m.id).collect();
+        debug!("ok, children of {} = {:?}", self.id, children_ids);
+        trace!("children = {:?}", children);
+        children
     }
 
-    pub fn is_parent(&self) -> bool {
-        self.parent_id.is_none()
+    pub fn get_id(&self) -> i32 {
+        self.id
+    }
+
+    pub fn get_parent(&self) -> Result<i32, ()> {
+        if let Some(parent_id) = self.parent_id {
+            Ok(parent_id)
+        } else {
+            debug!("post of {} has no parent", self.id);
+            Err(())
+        }
+    }
+
+    pub fn score_filter(&self, score_threshold: i32) -> bool {
+        debug!("post.score = {}, score_threshold = {}", self.score, score_threshold);
+        self.score < score_threshold
+    }
+}
+
+mod test {
+    #[allow(unused_imports)]
+    use super::Post;
+
+    #[test]
+    fn test_new_1121916() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        if let Ok(post) = rt.block_on(Post::new(1121916)) {
+            assert_eq!(post.id, 1121916);
+            assert_eq!(post.has_children, true);
+            assert_eq!(post.created_at, 1695383691);
+            assert_eq!(post.rating, "q");
+            assert_eq!(post.get_parent(), Err(()));
+            let children = rt.block_on(post.get_children());
+            assert_eq!(children.len(), 2);
+            if let Some(child) = children.get(0) {
+                assert_eq!(child.id, 1121917);
+            }
+        }
     }
 }

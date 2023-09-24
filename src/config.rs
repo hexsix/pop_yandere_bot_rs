@@ -34,6 +34,7 @@ impl fmt::Debug for Telegram {
 #[derive(Debug, Deserialize)]
 pub struct Yandere {
     pub rss_url: String,
+    pub score_threshold: i32,
 }
 
 mod test {
