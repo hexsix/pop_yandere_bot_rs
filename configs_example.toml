@@ -1,0 +1,15 @@
+[core]
+# you can use "trace", "debug", "info", "warn", "error"
+log_level = "debug"
+
+[db]
+database_url = "redis://{user}:{passsword}@{address}:{port}"
+# seconds, 7776000 secs == 3 months
+expire = 7776000
+
+[telegram]
+token = "1234567890:abcdefghijklmnopqrstuvwxyz"
+
+[yandere]
+rss_url = "https://yande.re/post/popular_recent"
+score_threshold = 40
