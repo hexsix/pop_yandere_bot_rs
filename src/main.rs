@@ -19,9 +19,7 @@ extern crate pretty_env_logger;
 extern crate log;
 
 static CONFIG: Lazy<Config> = Lazy::new(|| {
-    let config_file = std::env::var("EXLOLI_CONFIG");
-    let config_file = config_file.as_deref().unwrap_or("configs.toml");
-    Config::new(config_file).expect("Unable to parse configs.toml.")
+    Config::new("configs.toml").expect("Unable to parse configs.toml.")
 });
 
 static REDIS_CLIENT: Lazy<Client> = Lazy::new(|| {
