@@ -144,12 +144,17 @@ async fn main() {
 
     let bot = Bot::from_env();
 
-    if let Ok(body) = yandere::request(&CONFIG.yandere.rss_url).await {
-        let posts = yandere::parse_pop_recent(&body);
-        info!("{} posts in total", posts.len());
-        for (i, post) in posts.iter().enumerate() {
-            info!("{} of {} is now processing.", i + 1, posts.len());
-            run(&bot, post).await;
+    match yandere::request(&CONFIG.yandere.rss_url).await {
+        Ok(body) => {
+            let posts = yandere::parse_pop_recent(&body);
+            info!("{} posts in total", posts.len());
+            for (i, post) in posts.iter().enumerate() {
+                info!("{} of {} is now processing.", i + 1, posts.len());
+                run(&bot, post).await;
+            }
+        }
+        Err(e) => {
+            error!("oh, request {} error. error = {}", CONFIG.yandere.rss_url, e);
         }
     }
 }
