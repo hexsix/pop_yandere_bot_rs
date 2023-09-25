@@ -42,7 +42,7 @@ fn init() {
 
 async fn run(post: &Post) {
     if post.score_filter(CONFIG.yandere.score_threshold) {
-        info!("filtered(low score), post = {}", post.get_id());
+        debug!("filtered(low score), post = {}", post.get_id());
         return;
     }
     let mut posts = vec![];

@@ -32,6 +32,6 @@ pub async fn send_media_group(posts: &[Post]) -> Result<(), ()> {
         return Err(());
     }
 
-    info!("ok(send_media_group), posts = {:?}", post_ids);
+    debug!("ok(send_media_group), posts = {:?}", post_ids);
     Ok(())
 }

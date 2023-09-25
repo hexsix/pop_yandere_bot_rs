@@ -25,10 +25,20 @@ pub struct Core {
     pub log_level: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 pub struct Database {
     pub database_url: String,
     pub expire: usize,
+}
+
+impl fmt::Debug for Database {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Database {{ database_url: ******, expire: {} }}",
+            self.expire
+        )
+    }
 }
 
 #[derive(Deserialize)]
