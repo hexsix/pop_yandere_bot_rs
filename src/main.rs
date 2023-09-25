@@ -9,7 +9,7 @@ use once_cell::sync::Lazy;
 use redis::Client;
 use teloxide::prelude::*;
 
-use crate::bot::*;
+use crate::bot::send_media_group;
 use crate::config::Config;
 use crate::db::*;
 use crate::yandere::Post;
@@ -21,6 +21,8 @@ extern crate log;
 static CONFIG: Lazy<Config> = Lazy::new(|| {
     Config::new("configs.toml").expect("Unable to parse configs.toml.")
 });
+
+static BOT: Lazy<Bot> = Lazy::new(|| Bot::from_env());
 
 static REDIS_CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::open(CONFIG.db.database_url.clone())
@@ -35,105 +37,42 @@ fn init_env(log_level: &str, teloxide_token: &str) {
 fn init() {
     init_env(&CONFIG.core.log_level, &CONFIG.telegram.token);
     pretty_env_logger::init();
-    info!("configs: {:?}", CONFIG);
+    info!("ok(init config), configs = {:?}", CONFIG);
 }
 
-async fn run(bot: &Bot, post: &Post) {
-    // filter score
+async fn run(post: &Post) {
     if post.score_filter(CONFIG.yandere.score_threshold) {
-        info!("post({}) filtered because of low score", post.get_id());
+        info!("filtered(low score), post = {}", post.get_id());
         return;
     }
-    // send message
+    let mut posts = vec![];
     if let Ok(parent_id) = post.get_parent() {
-        // send group
         if let Ok(parent) = yandere::Post::new(parent_id).await {
-            let children = parent.get_children().await;
-            let children_ids: Vec<i32> =
-                children.iter().map(|m| m.get_id()).collect();
-            match already_sent_posts(&REDIS_CLIENT, &children) {
-                Ok(true) => {
-                    info!(
-                        "post({}) filtered because of already sent",
-                        post.get_id()
-                    );
-                }
-                Ok(false) => {
-                    match send_media_group(
-                        bot,
-                        CONFIG.telegram.channel_id.clone(),
-                        &children,
-                    )
-                    .await
-                    {
-                        Ok(_) => {
-                            if set_redis_posts(
-                                &REDIS_CLIENT,
-                                &children,
-                                CONFIG.db.expire,
-                            )
-                            .is_err()
-                            {
-                                warn!(
-                                    "oh, redis set error, children = {:?}",
-                                    children_ids
-                                );
-                            }
-                        }
-                        Err(_) => warn!(
-                            "oh, telegram request error, children = {:?}",
-                            children_ids
-                        ),
-                    }
-                }
-                Err(_) => {
-                    warn!(
-                        "oh, redis query error, children = {:?}",
-                        children_ids
+            posts = parent.get_children().await;
+        }
+    } else if post.has_children() {
+        posts = post.get_children().await;
+    }
+    if posts.is_empty() {
+        posts = vec![post.clone()];
+    }
+    let post_ids: Vec<i32> = posts.iter().map(|p| p.get_id()).collect();
+    match already_sent_posts(&posts) {
+        Ok(true) => {
+            info!("filtered(already_sent), posts = {:?}", post_ids)
+        }
+        Ok(false) => {
+            if let Ok(_) = send_media_group(&posts).await {
+                if let Err(e) = set_redis_posts(&posts) {
+                    error!(
+                        "error(set_redis, posts = {:?}, error = {}",
+                        post_ids, e
                     );
                 }
             }
         }
-    } else {
-        // send single
-        match already_sent_post(&REDIS_CLIENT, post) {
-            Ok(true) => {
-                info!(
-                    "post({}) filtered because of already sent",
-                    post.get_id()
-                );
-            }
-            Ok(false) => {
-                match send_message(
-                    bot,
-                    CONFIG.telegram.channel_id.clone(),
-                    post,
-                )
-                .await
-                {
-                    Ok(_) => {
-                        if set_redis_post(
-                            &REDIS_CLIENT,
-                            post,
-                            CONFIG.db.expire,
-                        )
-                        .is_err()
-                        {
-                            warn!(
-                                "oh, redis set error, post = {}",
-                                post.get_id()
-                            );
-                        }
-                    }
-                    Err(_) => warn!(
-                        "oh, telegram request error, post = {}",
-                        post.get_id()
-                    ),
-                }
-            }
-            Err(_) => {
-                warn!("oh, redis query error, post = {}", post.get_id());
-            }
+        Err(e) => {
+            error!("error(query_redis), posts = {:?}, error = {}", post_ids, e)
         }
     }
 }
@@ -142,22 +81,15 @@ async fn run(bot: &Bot, post: &Post) {
 async fn main() {
     init();
 
-    let bot = Bot::from_env();
-
     match yandere::request(&CONFIG.yandere.rss_url).await {
         Ok(body) => {
             let posts = yandere::parse_pop_recent(&body);
-            info!("{} posts in total", posts.len());
+            info!("ok, {} posts in total", posts.len());
             for (i, post) in posts.iter().enumerate() {
-                info!("{} of {} is now processing.", i + 1, posts.len());
-                run(&bot, post).await;
+                info!("ok, {} of {} is now processing.", i + 1, posts.len());
+                run(post).await;
             }
         }
-        Err(e) => {
-            error!(
-                "oh, request {} error. error = {}",
-                CONFIG.yandere.rss_url, e
-            );
-        }
+        Err(e) => error!("error(request yandere). error = {}", e),
     }
 }

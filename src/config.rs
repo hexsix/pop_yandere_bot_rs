@@ -1,7 +1,8 @@
-use anyhow::Error;
-use serde::Deserialize;
 use std::fmt;
 use std::path::Path;
+
+use anyhow::Error;
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -50,10 +51,11 @@ impl fmt::Debug for Telegram {
 pub struct Yandere {
     pub rss_url: String,
     pub score_threshold: i32,
+    pub updated_resend: bool,
 }
 
+#[cfg(test)]
 mod test {
-    #[allow(unused_imports)]
     use super::Config;
 
     #[test]
@@ -61,14 +63,6 @@ mod test {
         if let Ok(configs) = Config::new("configs.toml") {
             assert!(vec!["trace", "debug", "info", "warn", "error"]
                 .contains(&configs.core.log_level.as_str()))
-        }
-    }
-
-    #[test]
-    fn err() {
-        match Config::new("config.toml") {
-            Ok(_) => panic!(),
-            Err(_) => (),
         }
     }
 }

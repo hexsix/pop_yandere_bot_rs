@@ -1,10 +1,10 @@
-use redis::{Client, Commands, RedisResult};
+use redis::{Commands, RedisResult};
 
-use crate::yandere;
-use yandere::Post;
+use crate::yandere::Post;
+use crate::{CONFIG, REDIS_CLIENT};
 
-pub fn already_sent_post(client: &Client, post: &Post) -> RedisResult<bool> {
-    let mut con = client.get_connection()?;
+pub fn already_sent_post(post: &Post) -> RedisResult<bool> {
+    let mut con = REDIS_CLIENT.get_connection()?;
 
     let key = &format!("id:{}", post.get_id());
 
@@ -12,61 +12,47 @@ pub fn already_sent_post(client: &Client, post: &Post) -> RedisResult<bool> {
 
     match result {
         Some(updated_at) => {
-            if updated_at < post.get_updated_at() {
-                debug!(
-                    "ok, this post {} updated, send it again.",
-                    post.get_id()
-                );
-                return Ok(false);
+            if CONFIG.yandere.updated_resend {
+                if updated_at < post.get_updated_at() {
+                    debug!("resend post = {}", post.get_id());
+                    return Ok(false);
+                }
             }
-            debug!("oh, this post {} has been sent already.", post.get_id());
+            debug!("already sent post = {}", post.get_id());
             Ok(true)
         }
         None => {
-            debug!("ok, this post {} hasn't been sent yet.", post.get_id());
+            debug!("never send post = {}", post.get_id());
             Ok(false)
         }
     }
 }
 
-pub fn already_sent_posts(
-    client: &Client,
-    posts: &Vec<Post>,
-) -> RedisResult<bool> {
+pub fn already_sent_posts(posts: &Vec<Post>) -> RedisResult<bool> {
     for post in posts {
-        let result = already_sent_post(client, post)?;
+        let result = already_sent_post(post)?;
         if !result {
             return Ok(false);
         }
     }
-    debug!("oh, all posts have been sent already.");
     Ok(true)
 }
 
-pub fn set_redis_post(
-    client: &Client,
-    post: &Post,
-    expire: usize,
-) -> RedisResult<()> {
-    let mut con = client.get_connection()?;
+pub fn set_redis_post(post: &Post) -> RedisResult<()> {
+    let mut con = REDIS_CLIENT.get_connection()?;
 
     let key = &format!("id:{}", post.get_id());
     let value = post.get_updated_at();
 
-    con.set_ex(key, value, expire)?;
+    con.set_ex(key, value, CONFIG.db.expire)?;
 
-    debug!("ok, set key = {}, value = {}", key, value);
+    debug!("redis set key = {}, value = {}", key, value);
     Ok(())
 }
 
-pub fn set_redis_posts(
-    client: &Client,
-    posts: &Vec<Post>,
-    expire: usize,
-) -> RedisResult<()> {
+pub fn set_redis_posts(posts: &Vec<Post>) -> RedisResult<()> {
     for post in posts {
-        set_redis_post(client, post, expire)?;
+        set_redis_post(post)?;
     }
-    debug!("ok, set all posts.");
     Ok(())
 }

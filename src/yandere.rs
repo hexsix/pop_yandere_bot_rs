@@ -1,12 +1,15 @@
+use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
+use std::path::Path;
+
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::Value;
-use std::path::Path;
 use url::Url;
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Post {
     id: i32,
     tags: String,
@@ -29,8 +32,8 @@ pub struct Post {
 pub async fn request(url: &str) -> Result<String, reqwest::Error> {
     let body = reqwest::get(url).await?.text().await?;
 
-    debug!("ok, request {}", url);
-    trace!("body = {:?}", body);
+    debug!("request url = {}", url);
+    trace!("response body = {:?}", body);
 
     Ok(body)
 }
@@ -67,7 +70,7 @@ impl Post {
             if let Ok(post) = post {
                 let post = post.get("posts").unwrap().get(0).unwrap().clone();
                 if let Ok(post) = serde_json::from_value(post) {
-                    debug!("ok, new post {}", id);
+                    debug!("new post {}", id);
                     trace!("post = {:?}", post);
                     return Ok(post);
                 }
@@ -76,8 +79,17 @@ impl Post {
         Err(())
     }
 
+    pub fn score_filter(&self, score_threshold: i32) -> bool {
+        debug!("score = {}, threshold = {}", self.score, score_threshold);
+        self.score < score_threshold
+    }
+
+    pub fn has_children(&self) -> bool {
+        self.has_children
+    }
+
     pub async fn get_children(&self) -> Vec<Post> {
-        let mut children: Vec<Post> = vec![];
+        let mut children = HashSet::new();
         let target = format!(
             "https://yande.re/post.json?api_version=2&tags=parent:{}%20holds:true",
             self.id
@@ -89,7 +101,7 @@ impl Post {
                     for post in posts {
                         if let Ok(post) = serde_json::from_value(post.clone())
                         {
-                            children.push(post);
+                            children.insert(post);
                         }
                     }
                 }
@@ -106,14 +118,16 @@ impl Post {
                     for post in posts {
                         if let Ok(post) = serde_json::from_value(post.clone())
                         {
-                            children.push(post);
+                            children.insert(post);
                         }
                     }
                 }
             }
         }
+        let mut children: Vec<Post> = children.into_iter().collect();
+        children.sort();
         let children_ids: Vec<i32> = children.iter().map(|m| m.id).collect();
-        debug!("ok, children of {} = {:?}", self.id, children_ids);
+        debug!("children of {} = {:?}", self.id, children_ids);
         trace!("children = {:?}", children);
         children
     }
@@ -129,14 +143,6 @@ impl Post {
             debug!("post of {} has no parent", self.id);
             Err(())
         }
-    }
-
-    pub fn score_filter(&self, score_threshold: i32) -> bool {
-        debug!(
-            "post.score = {}, score_threshold = {}",
-            self.score, score_threshold
-        );
-        self.score < score_threshold
     }
 
     pub fn get_updated_at(&self) -> i64 {
@@ -204,6 +210,32 @@ impl Post {
     }
 }
 
+impl PartialEq for Post {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Post {}
+
+impl PartialOrd for Post {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.id.partial_cmp(&other.id)
+    }
+}
+
+impl Ord for Post {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.id.cmp(&other.id)
+    }
+}
+
+impl Hash for Post {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
 mod test {
     #[allow(unused_imports)]
     use super::Post;
@@ -219,7 +251,7 @@ mod test {
             assert_eq!(post.get_parent(), Err(()));
             let children = rt.block_on(post.get_children());
             assert_eq!(children.len(), 2);
-            if let Some(child) = children.get(0) {
+            if let Some(child) = children.get(1) {
                 assert_eq!(child.id, 1121917);
             }
         }

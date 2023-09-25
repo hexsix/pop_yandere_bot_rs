@@ -3,14 +3,20 @@
 log_level = "debug"
 
 [db]
+# redis only
 database_url = "redis://{user}:{passsword}@{address}:{port}"
 # seconds, 7776000 secs == 3 months
 expire = 7776000
 
 [telegram]
+# ask bot father to generate one
 token = "1234567890:abcdefghijklmnopqrstuvwxyz"
+# you can also use group_id or user_id, than it'll be sent to group or user.
 channel_id = "-01234567890"
 
 [yandere]
 rss_url = "https://yande.re/post/popular_recent"
+# if the post score is lower than threshold, it'll be filtered
 score_threshold = 40
+# if the post was updated, resend it
+updated_resend = false
