@@ -22,7 +22,7 @@ static CONFIG: Lazy<Config> = Lazy::new(|| {
     Config::new("configs.toml").expect("Unable to parse configs.toml.")
 });
 
-static BOT: Lazy<Bot> = Lazy::new(|| Bot::from_env());
+static BOT: Lazy<Bot> = Lazy::new(Bot::from_env);
 
 static REDIS_CLIENT: Lazy<Client> = Lazy::new(|| {
     Client::open(CONFIG.db.database_url.clone())
@@ -56,23 +56,9 @@ async fn run(post: &Post) {
     if posts.is_empty() {
         posts = vec![post.clone()];
     }
-    let post_ids: Vec<i32> = posts.iter().map(|p| p.get_id()).collect();
-    match already_sent_posts(&posts) {
-        Ok(true) => {
-            info!("filtered(already_sent), posts = {:?}", post_ids)
-        }
-        Ok(false) => {
-            if let Ok(_) = send_media_group(&posts).await {
-                if let Err(e) = set_redis_posts(&posts) {
-                    error!(
-                        "error(set_redis, posts = {:?}, error = {}",
-                        post_ids, e
-                    );
-                }
-            }
-        }
-        Err(e) => {
-            error!("error(query_redis), posts = {:?}, error = {}", post_ids, e)
+    if let Ok(false) = already_sent_posts(&posts) {
+        if send_media_group(&posts).await.is_ok() {
+            let _ = set_redis_posts(&posts);
         }
     }
 }
