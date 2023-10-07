@@ -62,22 +62,27 @@ async fn run(post: &Post) {
         let post_ids: Vec<i32> = posts.iter().map(|m| m.get_id()).collect();
         match send_media_group(&posts).await {
             Ok(_) => {
+                debug!("ok(send_msg), posts = {:?}", post_ids);
                 let _ = set_redis_posts(&posts);
             }
             Err(RetryAfter(dur)) => {
-                debug!(
+                info!(
                     "wait(send_msg), post_ids = {:?}, retry after {}s",
                     post_ids,
                     dur.as_secs()
                 );
                 thread::sleep(dur);
-                if send_media_group(&posts).await.is_ok() {
-                    let _ = set_redis_posts(&posts);
-                } else {
-                    warn!(
-                        "warn(send_msg failed after retry), post_ids = {:?}",
-                        post_ids
-                    );
+                match send_media_group(&posts).await {
+                    Ok(_) => {
+                        debug!("ok(send_msg), posts = {:?}", post_ids);
+                        let _ = set_redis_posts(&posts);
+                    }
+                    Err(e) => {
+                        error!(
+                            "error after retry(send_msg), post_ids = {:?}, error = {}",
+                            post_ids, e
+                        );
+                    }
                 }
             }
             Err(e) => {

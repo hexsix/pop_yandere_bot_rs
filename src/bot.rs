@@ -8,9 +8,10 @@ use url::Url;
 use crate::yandere::Post;
 use crate::{BOT, CONFIG};
 
-pub async fn send_media_group(posts: &[Post]) -> Result<(), RequestError> {
+pub async fn send_media_group(
+    posts: &[Post],
+) -> Result<Vec<Message>, RequestError> {
     thread::sleep(Duration::from_secs(1));
-    let post_ids: Vec<i32> = posts.iter().map(|m| m.get_id()).collect();
     let media_group: Vec<InputMedia> = posts
         .iter()
         .map(|post| {
@@ -25,18 +26,13 @@ pub async fn send_media_group(posts: &[Post]) -> Result<(), RequestError> {
         .collect();
 
     for media_group in media_group.chunks(10) {
-        if let Err(e) = BOT
-            .send_media_group(
-                CONFIG.telegram.channel_id.clone(),
-                media_group.to_vec(),
-            )
-            .disable_notification(true)
-            .await
-        {
-            return Err(e);
-        }
+        BOT.send_media_group(
+            CONFIG.telegram.channel_id.clone(),
+            media_group.to_vec(),
+        )
+        .disable_notification(true)
+        .await?;
     }
 
-    debug!("ok(send_media_group), posts = {:?}", post_ids);
-    Ok(())
+    Ok(vec![])
 }

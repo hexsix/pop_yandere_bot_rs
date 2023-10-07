@@ -220,7 +220,7 @@ impl Eq for Post {}
 
 impl PartialOrd for Post {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.id.partial_cmp(&other.id)
+        Some(self.cmp(other))
     }
 }
 
