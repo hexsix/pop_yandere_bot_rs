@@ -4,10 +4,12 @@ mod db;
 mod yandere;
 
 use std::env;
+use std::thread;
 
 use once_cell::sync::Lazy;
 use redis::Client;
 use teloxide::prelude::*;
+use teloxide::RequestError::RetryAfter;
 
 use crate::bot::send_media_group;
 use crate::config::Config;
@@ -57,8 +59,33 @@ async fn run(post: &Post) {
         posts = vec![post.clone()];
     }
     if let Ok(false) = already_sent_posts(&posts) {
-        if send_media_group(&posts).await.is_ok() {
-            let _ = set_redis_posts(&posts);
+        let post_ids: Vec<i32> = posts.iter().map(|m| m.get_id()).collect();
+        match send_media_group(&posts).await {
+            Ok(_) => {
+                let _ = set_redis_posts(&posts);
+            }
+            Err(RetryAfter(dur)) => {
+                debug!(
+                    "wait(send_msg), post_ids = {:?}, retry after {}s",
+                    post_ids,
+                    dur.as_secs()
+                );
+                thread::sleep(dur);
+                if send_media_group(&posts).await.is_ok() {
+                    let _ = set_redis_posts(&posts);
+                } else {
+                    warn!(
+                        "warn(send_msg failed after retry), post_ids = {:?}",
+                        post_ids
+                    );
+                }
+            }
+            Err(e) => {
+                error!(
+                    "error(send_msg), post_ids = {:?}, error = {}",
+                    post_ids, e
+                );
+            }
         }
     }
 }
