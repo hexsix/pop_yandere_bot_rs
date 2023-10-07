@@ -2,6 +2,8 @@
 
 A telegram bot for RSS yande.re popular recent written in Rust
 
+See example at https://t.me/yandere_pop_recent
+
 ## Run
 
 There are several ways to run
@@ -31,17 +33,6 @@ Put the `configs.toml` under the same folder and run binary
 $ ./pop_yandere_bot
 ```
 
-### Windows
-
-Put the `configs.toml` under the same folder and run binary
-
-```powershell
-$ .\pop_yandere_bot.exe
-```
-
-### macOS
-
-Put the `configs.toml` under the same folder and run binary
 
 ```bash
 $ ./pop_yandere_bot
