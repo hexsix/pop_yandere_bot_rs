@@ -3,7 +3,7 @@
 # "trace", "debug", "info", "warn", "error"
 log_level = "debug"
 
-# Optional, default as "0 0 */3 * * *", which means "run this task every 3 hours at 0 minute and 0 second of every day"
+# Optional, default as "0 0 0,9,12,15,18,21 * * *", which means "run this task 9:00:00, 12:00:00 ... of every day"
 # Each fields:
 # Second (0 - 59)
 # Minute (0 - 59)
@@ -31,7 +31,7 @@ channel_id = "-01234567890"
 # Optional, default as "https://yande.re/post/popular_recent"
 rss_url = "https://yande.re/post/popular_recent"
 
-# Optional, default as 40
+# Optional, default as 0
 # if the post score is lower than threshold, it'll be filtered
 score_threshold = 40
 
