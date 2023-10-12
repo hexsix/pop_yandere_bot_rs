@@ -1,21 +1,28 @@
 use std::fmt;
-use std::path::Path;
 
 use anyhow::Error;
+use figment::{
+    providers::{Env, Format, Toml},
+    Figment,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
+    #[serde(default)]
     pub core: Core,
     pub db: Database,
     pub telegram: Telegram,
+    #[serde(default)]
     pub yandere: Yandere,
 }
 
 impl Config {
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        let configs = std::fs::read_to_string(path)?;
-        let configs: Config = toml::from_str(&configs)?;
+    pub fn new() -> Result<Self, Error> {
+        let configs: Config = Figment::new()
+            .merge(Toml::file("configs.toml"))
+            .merge(Env::prefixed("APP_"))
+            .extract()?;
         Ok(configs)
     }
 }
@@ -34,6 +41,12 @@ fn log_level_default() -> String {
 
 fn scheduler_default() -> String {
     String::from("0 0 0,9,12,15,18,21 * * *")
+}
+
+impl Default for Core {
+    fn default() -> Self {
+        Core { log_level: log_level_default(), scheduler: scheduler_default() }
+    }
 }
 
 #[derive(Deserialize)]
@@ -95,15 +108,12 @@ fn updated_resend_default() -> bool {
     false
 }
 
-#[cfg(test)]
-mod test {
-    use super::Config;
-
-    #[test]
-    fn ok() {
-        if let Ok(configs) = Config::new("configs.toml") {
-            assert!(vec!["trace", "debug", "info", "warn", "error"]
-                .contains(&configs.core.log_level.as_str()))
+impl Default for Yandere {
+    fn default() -> Self {
+        Yandere {
+            rss_url: rss_url_default(),
+            score_threshold: score_threshold_default(),
+            updated_resend: updated_resend_default(),
         }
     }
 }

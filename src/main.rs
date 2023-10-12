@@ -23,7 +23,7 @@ extern crate pretty_env_logger;
 extern crate log;
 
 static CONFIG: Lazy<Config> = Lazy::new(|| {
-    Config::new("configs.toml").expect("Unable to parse configs.toml.")
+    Config::new().expect("Unable to parse configs.")
 });
 
 static BOT: Lazy<Bot> = Lazy::new(Bot::from_env);
@@ -118,7 +118,7 @@ async fn main() {
     let mut sched = JobScheduler::new();
 
     sched.add(Job::new(CONFIG.core.scheduler.parse().unwrap(), || {
-        let _ = tokio::spawn(async {
+        tokio::spawn(async {
             run().await;
         });
     }));
