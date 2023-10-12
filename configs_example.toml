@@ -1,22 +1,40 @@
 [core]
-# you can use "trace", "debug", "info", "warn", "error"
+# Optional, default as "info"
+# "trace", "debug", "info", "warn", "error"
 log_level = "debug"
 
+# Optional, default as "0 0 */3 * * *", which means "run this task every 3 hours at 0 minute and 0 second of every day"
+# Each fields:
+# Second (0 - 59)
+# Minute (0 - 59)
+# Hour (0 - 23)
+# Day of the month (1 - 31)
+# Month (1 - 12)
+# Day of the week (0 - 7) (Sunday = 0 or 7)
+scheduler = "0 0 0,9,12,15,18,21 * * *"
+
 [db]
-# redis only
+# Required, redis only
 database_url = "redis://{user}:{passsword}@{address}:{port}"
-# seconds, 7776000 secs == 3 months
+
+# Optional, default as 7776000, which means 7776000 secs (90 days)
 expire = 7776000
 
 [telegram]
-# ask bot father to generate one
+# Required, ask bot father to generate one
 token = "1234567890:abcdefghijklmnopqrstuvwxyz"
-# you can also use group_id or user_id, than it'll be sent to group or user.
+
+# Required, you can also use group_id or user_id, than it'll be sent to group or user.
 channel_id = "-01234567890"
 
 [yandere]
+# Optional, default as "https://yande.re/post/popular_recent"
 rss_url = "https://yande.re/post/popular_recent"
+
+# Optional, default as 40
 # if the post score is lower than threshold, it'll be filtered
 score_threshold = 40
+
+# Optional, default as false
 # if the post was updated, resend it
 updated_resend = false

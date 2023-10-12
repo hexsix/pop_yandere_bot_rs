@@ -22,17 +22,11 @@ $ vim configs.toml
 
 ```bash
 $ docker run --name pop_yandere_bot -v ./configs.toml:/app/configs.toml hexsix/pop_yandere_bot:latest
-$ docker restart pop_yandere_bot
 ```
 
 ### Linux
 
 Put the `configs.toml` under the same folder and run binary
-
-```bash
-$ ./pop_yandere_bot
-```
-
 
 ```bash
 $ ./pop_yandere_bot

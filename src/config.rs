@@ -23,6 +23,7 @@ impl Config {
 #[derive(Debug, Deserialize)]
 pub struct Core {
     pub log_level: String,
+    pub scheduler: String,
 }
 
 #[derive(Deserialize)]

@@ -5,7 +5,9 @@ mod yandere;
 
 use std::env;
 use std::thread;
+use std::time::Duration;
 
+use job_scheduler::{Job, JobScheduler};
 use once_cell::sync::Lazy;
 use redis::Client;
 use teloxide::prelude::*;
@@ -42,7 +44,7 @@ fn init() {
     info!("ok(init config), configs = {:?}", CONFIG);
 }
 
-async fn run(post: &Post) {
+async fn send(post: &Post) {
     if post.score_filter(CONFIG.yandere.score_threshold) {
         debug!("filtered(low score), post = {}", post.get_id());
         return;
@@ -95,19 +97,35 @@ async fn run(post: &Post) {
     }
 }
 
-#[tokio::main]
-async fn main() {
-    init();
-
+async fn run() {
     match yandere::request(&CONFIG.yandere.rss_url).await {
         Ok(body) => {
             let posts = yandere::parse_pop_recent(&body);
             info!("ok, {} posts in total", posts.len());
             for (i, post) in posts.iter().enumerate() {
                 info!("ok, {} of {} is now processing.", i + 1, posts.len());
-                run(post).await;
+                send(post).await;
             }
         }
         Err(e) => error!("error(request yandere). error = {}", e),
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    init();
+
+    let mut sched = JobScheduler::new();
+
+    sched.add(Job::new(CONFIG.core.scheduler.parse().unwrap(), || {
+        let _ = tokio::spawn(async {
+            run().await;
+        });
+    }));
+
+    loop {
+        sched.tick();
+
+        std::thread::sleep(Duration::from_millis(500));
     }
 }
