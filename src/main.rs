@@ -22,9 +22,8 @@ extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
 
-static CONFIG: Lazy<Config> = Lazy::new(|| {
-    Config::new().expect("Unable to parse configs.")
-});
+static CONFIG: Lazy<Config> =
+    Lazy::new(|| Config::new().expect("Unable to parse configs."));
 
 static BOT: Lazy<Bot> = Lazy::new(Bot::from_env);
 
