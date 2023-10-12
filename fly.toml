@@ -1,0 +1,10 @@
+app = "pop-yandere-bot"
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
+
+[build]
+  image = "hexsix/pop_yandere_bot:latest"
+
+[env]
+  APP_core = "{scheduler=\"0 0 1,4,7,10,13,16 * * *\"}"
