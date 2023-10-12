@@ -2,8 +2,8 @@ name: Cargo Test
 
 on:
   push:
-    branches:
-      - master
+    paths:
+      - '**/*.rs'
 
 env:
   CARGO_TERM_COLOR: always
