@@ -15,6 +15,9 @@ class YandereClient:
         self.threshold = config.threshold
         self.session = httpx.AsyncClient(follow_redirects=True)
 
+    async def close(self):
+        await self.session.aclose()
+
     async def new_post(self, id: int) -> Post | None:
         logger.info(f"Getting new post {id}")
         response = await self.session.get(

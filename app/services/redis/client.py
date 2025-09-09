@@ -1,6 +1,6 @@
+import redis.asyncio as redis
 from loguru import logger
 
-import redis.asyncio as redis
 from app.configs import RedisConfig
 
 
@@ -18,22 +18,22 @@ class RedisClient:
         logger.debug("Closing Redis connection")
         await self.client.aclose()
 
-    async def already_sent_post(self, post_id: str) -> bool:
+    async def already_sent_post(self, post_id: int) -> bool:
         logger.debug(f"Checking if post {post_id} has already been sent")
         return await self.client.get(f"post:{post_id}") is not None
 
-    async def already_sent_posts(self, posts_ids: list[str]) -> bool:
+    async def already_sent_posts(self, posts_ids: list[int]) -> bool:
         logger.debug(f"Checking if posts {posts_ids} have already been sent")
         for post_id in posts_ids:
             if not await self.already_sent_post(post_id):
                 return False
         return True
 
-    async def set_post_as_sent(self, post_id: str):
+    async def set_post_as_sent(self, post_id: int):
         logger.debug(f"Setting post {post_id} as sent")
         await self.client.set(f"post:{post_id}", "1", ex=self.expiration_time)
 
-    async def set_posts_as_sent(self, posts_ids: list[str]):
+    async def set_posts_as_sent(self, posts_ids: list[int]):
         logger.debug(f"Setting posts {posts_ids} as sent")
         for post_id in posts_ids:
             await self.client.set(f"post:{post_id}", "1", ex=self.expiration_time)

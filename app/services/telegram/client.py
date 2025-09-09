@@ -17,6 +17,9 @@ class TelegramClient:
         self.channel_id = config.channel_id
         self.bot = Bot(token=self.token)
 
+    async def close(self):
+        await self.bot.close()
+
     def _escape_markdown_v2(self, text: str) -> str:
         """Escape special characters for Telegram MarkdownV2 format."""
         escape_chars = [

@@ -20,7 +20,7 @@ class TelegramConfig:
 class RSSConfig:
     def __init__(self):
         self.url = os.getenv("RSS_URL", "https://yande.re")
-        self.threshold = os.getenv("RSS_THRESHOLD", 40)
+        self.threshold = int(os.getenv("RSS_THRESHOLD", 40))
 
 
 class Config:
