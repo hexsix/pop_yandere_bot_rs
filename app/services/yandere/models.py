@@ -22,7 +22,7 @@ class Post(BaseModel):
     preview_height: int | None
     actual_preview_width: int | None
     actual_preview_height: int | None
-    sample_url: str | None
+    sample_url: str
     sample_width: int | None
     sample_height: int | None
     sample_file_size: int | None
@@ -49,4 +49,4 @@ class Post(BaseModel):
 
 
 class Posts(BaseModel):
-    posts: list[Post] | None
+    posts: list[Post]

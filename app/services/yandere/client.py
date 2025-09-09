@@ -22,7 +22,7 @@ class YandereClient:
         )
         response.raise_for_status()
         result = Posts.model_validate(response.json())
-        if result.posts is None or len(result.posts) == 0:
+        if len(result.posts) == 0:
             return None
         return result.posts[0]
 
@@ -40,10 +40,6 @@ class YandereClient:
 
         holds_result = Posts.model_validate(holds_response.json())
         result = Posts.model_validate(no_holds_response.json())
-        if result.posts is None or holds_result.posts is None:
-            return []
-        if holds_result.posts is None or len(holds_result.posts) == 0:
-            return result.posts
         result.posts.extend(holds_result.posts)
         return result.posts
 
