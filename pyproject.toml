@@ -4,4 +4,11 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "dotenv>=0.9.9",
+    "fastapi[standard]>=0.116.1",
+    "httpx>=0.28.1",
+    "loguru>=0.7.3",
+    "python-telegram-bot>=22.3",
+    "redis>=6.4.0",
+]
