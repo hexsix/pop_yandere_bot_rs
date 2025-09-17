@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from loguru import logger
 
-from app.api import rss
+from app.api import rss, sent
 from app.dependencies import get_config
 from app.services.redis import RedisClient
 from app.services.telegram import TelegramClient
@@ -28,6 +28,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(rss.router)
+app.include_router(sent.router)
 
 
 @app.get("/health")
