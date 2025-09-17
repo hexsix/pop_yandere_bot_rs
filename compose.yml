@@ -10,13 +10,11 @@ services:
       - ./app:/app/app
     environment:
       - LOG_LEVEL=${LOG_LEVEL}
+      - TZ=Asia/Shanghai
+    networks:
+      - redis_default
 
-  redis:
-    image: redis:latest
-    ports:
-      - 6379:6379
-    volumes:
-      - redis_data:/data
+networks:
+  redis_default:
+    external: true
 
-volumes:
-  redis_data:
