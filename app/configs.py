@@ -15,6 +15,9 @@ class TelegramConfig:
         self.token = os.getenv("TELEGRAM_TOKEN")
         self.chat_id = os.getenv("TELEGRAM_CHAT_ID")
         self.channel_id = os.getenv("TELEGRAM_CHANNEL_ID")
+        self.read_timeout = float(os.getenv("TELEGRAM_READ_TIMEOUT", "30"))
+        self.write_timeout = float(os.getenv("TELEGRAM_WRITE_TIMEOUT", "30"))
+        self.connect_timeout = float(os.getenv("TELEGRAM_CONNECT_TIMEOUT", "10"))
 
 
 class RSSConfig:

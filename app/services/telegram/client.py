@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from loguru import logger
 from telegram import Bot, InputMediaPhoto
 from telegram.constants import ParseMode
+from telegram.request import HTTPXRequest
 
 from app.configs import TelegramConfig
 from app.services.yandere.models import Post
@@ -15,7 +16,15 @@ class TelegramClient:
         self.token = config.token
         self.chat_id = config.chat_id
         self.channel_id = config.channel_id
-        self.bot = Bot(token=self.token)
+
+        # Configure custom request with timeout settings
+        request = HTTPXRequest(
+            read_timeout=config.read_timeout,
+            write_timeout=config.write_timeout,
+            connect_timeout=config.connect_timeout
+        )
+
+        self.bot = Bot(token=self.token, request=request)
 
     async def close(self):
         await self.bot.close()
