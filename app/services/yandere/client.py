@@ -43,8 +43,9 @@ class YandereClient:
 
         holds_result = Posts.model_validate(holds_response.json())
         result = Posts.model_validate(no_holds_response.json())
-        result.posts.extend(holds_result.posts)
-        return result.posts
+
+        all_posts = set(result.posts + holds_result.posts)
+        return sorted(all_posts)
 
     async def rss(self) -> list[Post]:
         logger.info("Getting RSS")

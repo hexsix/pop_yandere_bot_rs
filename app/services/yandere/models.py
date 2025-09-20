@@ -47,6 +47,34 @@ class Post(BaseModel):
     last_noted_at: int | None
     last_commented_at: int | None
 
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Post):
+            return False
+        return self.id == other.id
+
+    def __lt__(self, other) -> bool:
+        if not isinstance(other, Post):
+            return NotImplemented
+        return self.id < other.id
+
+    def __le__(self, other) -> bool:
+        if not isinstance(other, Post):
+            return NotImplemented
+        return self.id <= other.id
+
+    def __gt__(self, other) -> bool:
+        if not isinstance(other, Post):
+            return NotImplemented
+        return self.id > other.id
+
+    def __ge__(self, other) -> bool:
+        if not isinstance(other, Post):
+            return NotImplemented
+        return self.id >= other.id
+
 
 class Posts(BaseModel):
     posts: list[Post]
